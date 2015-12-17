@@ -1,0 +1,11 @@
+diff -up chromium-46.0.2490.86/sync/sync_tests.gypi.sync_link_zlib chromium-46.0.2490.86/sync/sync_tests.gypi
+--- chromium-46.0.2490.86/sync/sync_tests.gypi.sync_link_zlib	2015-11-11 18:06:15.206748039 +0100
++++ chromium-46.0.2490.86/sync/sync_tests.gypi	2015-11-11 18:06:30.126686531 +0100
+@@ -256,6 +256,7 @@
+         '../testing/gtest.gyp:gtest',
+         '../third_party/leveldatabase/leveldatabase.gyp:leveldatabase',
+         '../third_party/protobuf/protobuf.gyp:protobuf_lite',
++        '../third_party/zlib/zlib.gyp:zlib',
+         'sync',
+         'test_support_sync_core',
+         'test_support_sync_internal_api',

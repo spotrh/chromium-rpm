@@ -1,0 +1,11 @@
+diff -up chromium-46.0.2490.80/media/cast/cast.gyp.cast_link_zlib chromium-46.0.2490.80/media/cast/cast.gyp
+--- chromium-46.0.2490.80/media/cast/cast.gyp.cast_link_zlib	2015-11-10 16:14:16.640110334 +0100
++++ chromium-46.0.2490.80/media/cast/cast.gyp	2015-11-10 16:14:26.088073439 +0100
+@@ -25,6 +25,7 @@
+         '<(DEPTH)/base/base.gyp:base',
+         '<(DEPTH)/crypto/crypto.gyp:crypto',
+         '<(DEPTH)/net/net.gyp:net',
++        '<(DEPTH)/third_party/zlib/zlib.gyp:zlib',
+       ],
+       'export_dependent_settings': [
+         'cast_logging_proto',

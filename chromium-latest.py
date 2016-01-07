@@ -28,6 +28,7 @@ except ImportError:
   optparse = True
 import csv
 import glob
+import hashlib
 import locale
 import os
 import shutil
@@ -107,48 +108,61 @@ def remove_file_if_exists(filename):
       pass
 
 
-def download_version(version):
+def download_file_and_compare_hashes(file_to_download):
 
-  chromium_file = 'chromium-%s.tar.xz' % version
-  path = '%s%s' % (chromium_url, chromium_file)
+  hashes_file = '%s.hashes' % file_to_download
 
   if (args.clean):
-    remove_file_if_exists(chromium_file)
+    remove_file_if_exists(file_to_download)
+    remove_file_if_exists(hashes_file)
 
   # Let's make sure we haven't already downloaded it.
-  if os.path.isfile("./%s" % chromium_file):
-    print "%s already exists!" % chromium_file
+  tarball_local_file = "./%s" % file_to_download
+  if os.path.isfile(tarball_local_file):
+    print "%s already exists!" % file_to_download
   else:
+    path = '%s%s' % (chromium_url, file_to_download)
     print "Downloading %s" % path
     # Perhaps look at using python-progressbar at some point?
-    info=urllib.urlretrieve(path, chromium_file, reporthook=dlProgress)[1]
+    info=urllib.urlretrieve(path, file_to_download, reporthook=dlProgress)[1]
     urllib.urlcleanup()
     print ""
     if (info["Content-Type"] != "application/x-tar"):
       print 'Chromium %s tarballs are not on servers.' % version
-      remove_file_if_exists (chromium_file)
+      remove_file_if_exists (file_to_download)
       sys.exit(1)
 
+  hashes_local_file = "./%s" % hashes_file
+  if not os.path.isfile(hashes_local_file):
+    path = '%s%s' % (chromium_url, hashes_file)
+    print "Downloading %s" % path
+    # Perhaps look at using python-progressbar at some point?
+    info=urllib.urlretrieve(path, hashes_file, reporthook=dlProgress)[1]
+    urllib.urlcleanup()
+    print ""
+
+  if os.path.isfile(hashes_local_file):
+    with open(hashes_local_file, "r") as input_file:
+      md5sum = input_file.readline().split()[1]
+      md5 = hashlib.md5()
+      with open(tarball_local_file, "rb") as f:
+        for block in iter(lambda: f.read(65536), b""):
+          md5.update(block)
+        if (md5sum == md5.hexdigest()):
+          print "MD5 matches for %s!" % file_to_download
+        else:
+          print "MD5 mismatch for %s!" % file_to_download
+          sys.exit(1)
+  else:
+    print "Cannot compare hashes for %s!" % file_to_download
+
+
+def download_version(version):
+
+  download_file_and_compare_hashes ('chromium-%s.tar.xz' % version)
+
   if (args.tests):
-    chromium_testdata_file = 'chromium-%s-testdata.tar.xz' % version
-    path = '%s%s' % (chromium_url, chromium_testdata_file)
-
-    if (args.clean):
-      remove_file_if_exists(chromium_testdata_file)
-
-    # Let's make sure we haven't already downloaded it.
-    if os.path.isfile("./%s" % chromium_testdata_file):
-      print "%s already exists!" % chromium_testdata_file
-    else:
-      # Perhaps look at using python-progressbar at some point?
-      print "Downloading %s" % path
-      info=urllib.urlretrieve(path, chromium_testdata_file, reporthook=dlProgress)[1]
-      urllib.urlcleanup()
-      print ""
-      if (info["Content-Type"] != "application/x-tar"):
-        print 'Chromium %s tests tarballs are not on servers.' % version
-        remove_file_if_exists (chromium_testdata_file)
-        sys.exit(1)
+    download_file_and_compare_hashes ('chromium-%s-testdata.tar.xz' % version)
 
 
 def download_chrome_latest_rpm(arch):
@@ -265,6 +279,10 @@ if __name__ == '__main__':
       print "%s is possibly corrupted, exiting." % (latest)
       sys.exit(1)
 
+  # We really don't need these on Fedora. */
+  delete_chromium_dir ('build/linux/debian_wheezy_amd64-sysroot')
+  delete_chromium_dir ('build/linux/debian_wheezy_i386-sysroot')
+
   if (args.cleansources):
     junk_dirs = ['third_party/WebKit/Tools/Scripts/webkitpy/layout_tests',
                  'webkit/data/layout_tests', 'third_party/hunspell/dictionaries',
@@ -285,7 +303,7 @@ if __name__ == '__main__':
 
   if (args.ffmpegclean):
     print("Cleaning ffmpeg from proprietary things...")
-    os.system("./clean_ffmpeg.sh %s/third_party/ffmpeg %d" % (latest_dir, 0 if args.ffmpegarm else 1))
+    os.system("./clean_ffmpeg.sh %s %d" % (latest_dir, 0 if args.ffmpegarm else 1))
     print "Done!"
 
   if (not args.prep):

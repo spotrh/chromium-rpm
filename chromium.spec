@@ -5,6 +5,8 @@
 %global chromium_path %{_libdir}/chromium-browser%{chromium_channel}
 %global crd_path %{_libdir}/chrome-remote-desktop
 %global tests 0
+# Try to not use the Xvfb as it is slow..
+%global tests_force_display 0
 # If we build with shared on, then chrome-remote-desktop depends on chromium libs.
 # If we build with shared off, then users cannot swap out libffmpeg (and i686 gets a lot harder to build)
 %global shared 1
@@ -33,7 +35,7 @@
 
 Name:		chromium%{chromium_channel}
 Version:	47.0.2526.106
-Release:	1%{?dist}
+Release:	2%{?dist}
 Summary:	A WebKit (Blink) powered web browser
 Url:		http://www.chromium.org/Home
 License:	BSD and LGPLv2+ and ASL 2.0 and IJG and MIT and GPLv2+ and ISC and OpenSSL and (MPLv1.1 or GPLv2 or LGPLv2)
@@ -69,17 +71,17 @@ Patch102:	chromium-46.0.2490.86-sync_link_zlib.patch
 # If you want to include the ffmpeg arm sources append the --ffmpegarm switch
 # https://commondatastorage.googleapis.com/chromium-browser-official/chromium-%%{version}.tar.xz
 Source0:	chromium-%{version}-clean.tar.xz
-%if %{tests}
+%if 0%{tests}
 Source1:	https://commondatastorage.googleapis.com/chromium-browser-official/chromium-%{version}-testdata.tar.xz
 %endif
-# https://chromium.googlesource.com/chromium/tools/depot_tools.git/+archive/d5a1ab12efbc1c790a9bf3da57a74bf37d7205bc.tar.gz
+# https://chromium.googlesource.com/chromium/tools/depot_tools.git/+archive/7e7a454f9afdddacf63e10be48f0eab603be654e.tar.gz
 Source2:	depot_tools.git-master.tar.gz
 Source3:	chromium-browser.sh
 Source4:	%{chromium_browser_channel}.desktop
 # Also, only used if you want to reproduce the clean tarball.
 Source5:	clean_ffmpeg.sh
 Source6:	chromium-latest.py
-Source7:	process_ffmpeg_gyp.py
+Source7:	get_free_ffmpeg_source_files.py
 # Get the names of all tests (gtests) for Linux
 # Usage: get_linux_tests_name.py chromium-%%{version} --spec
 Source8:	get_linux_tests_names.py
@@ -117,10 +119,10 @@ BuildRequires:	libusb-devel
 BuildRequires:	libXdamage-devel
 BuildRequires:	libXScrnSaver-devel
 BuildRequires:	libXtst-devel
-BuildRequires:	nss-devel >= 3.12.3
+BuildRequires:	nss-devel
 BuildRequires:	pciutils-devel
 BuildRequires:	pulseaudio-libs-devel
-%if %{?tests}
+%if 0%{?tests}
 BuildRequires:	pam-devel
 # Tests needs X
 BuildRequires:	Xvfb
@@ -222,7 +224,7 @@ ExclusiveArch:	x86_64 i686
 # Bundled bits (I'm sure I've missed some)
 Provides: bundled(angle) = 2422
 Provides: bundled(bintrees) = 1.0.1
-## This is a fork of openssl.
+# This is a fork of openssl.
 Provides: bundled(boringssl)
 Provides: bundled(brotli)
 Provides: bundled(bspatch)
@@ -306,7 +308,7 @@ Remote desktop support for google-chrome & chromium.
 %prep
 %setup -q -T -c -n %{name}-policies -a 10
 %setup -q -T -c -n depot_tools -a 2
-%if %{tests}
+%if 0%{tests}
 %setup -q -n chromium-%{version} -b 1
 %else
 %setup -q -n chromium-%{version}
@@ -510,10 +512,133 @@ export CHROMIUM_BROWSER_GYP_DEFINES="\
 %endif
 	-Dwerror="
 
+# Remove most of the bundled libraries. Libraries specified below (taken from
+# Gentoo's Chromium ebuild) are the libraries that needs to be preserved.
+build/linux/unbundle/remove_bundled_libraries.py \
+	'third_party/ffmpeg' \
+	'third_party/adobe' \
+	'third_party/flac' \
+	'third_party/harfbuzz-ng' \
+	'third_party/icu' \
+	'third_party/libevent' \
+	'third_party/libjpeg_turbo' \
+	'third_party/libpng' \
+	'third_party/libwebp' \
+	'third_party/libxml' \
+	'third_party/libxslt' \
+	'third_party/re2' \
+	'third_party/snappy' \
+	'third_party/speech-dispatcher' \
+	'third_party/usb_ids' \
+	'third_party/xdg-utils' \
+	'third_party/yasm' \
+	'third_party/zlib' \
+	'base/third_party/dmg_fp' \
+	'base/third_party/dynamic_annotations' \
+	'base/third_party/icu' \
+	'base/third_party/nspr' \
+	'base/third_party/superfasthash' \
+	'base/third_party/symbolize' \
+	'base/third_party/valgrind' \
+	'base/third_party/xdg_mime' \
+	'base/third_party/xdg_user_dirs' \
+	'breakpad/src/third_party/curl' \
+	'chrome/third_party/mozilla_security_manager' \
+	'courgette/third_party' \
+	'crypto/third_party/nss' \
+	'net/third_party/mozilla_security_manager' \
+	'net/third_party/nss' \
+	'third_party/WebKit' \
+	'third_party/analytics' \
+	'third_party/angle' \
+	'third_party/angle/src/third_party/compiler' \
+	'third_party/boringssl' \
+	'third_party/brotli' \
+	'third_party/cacheinvalidation' \
+	'third_party/catapult' \
+	'third_party/catapult/tracing/third_party/components/polymer' \
+	'third_party/catapult/tracing/third_party/d3' \
+	'third_party/catapult/tracing/third_party/gl-matrix' \
+	'third_party/catapult/tracing/third_party/jszip' \
+	'third_party/catapult/tracing/third_party/tvcm' \
+	'third_party/catapult/tracing/third_party/tvcm/third_party/rcssmin' \
+	'third_party/catapult/tracing/third_party/tvcm/third_party/rjsmin' \
+	'third_party/cld_2' \
+	'third_party/cros_system_api' \
+	'third_party/cython/python_flags.py' \
+	'third_party/devscripts' \
+	'third_party/dom_distiller_js' \
+	'third_party/dom_distiller_js/dist/proto_gen/third_party/dom_distiller_js' \
+	'third_party/fips181' \
+	'third_party/flot' \
+	'third_party/google_input_tools' \
+	'third_party/google_input_tools/third_party/closure_library' \
+	'third_party/google_input_tools/third_party/closure_library/third_party/closure' \
+	'third_party/hunspell' \
+	'third_party/iccjpeg' \
+	'third_party/jstemplate' \
+	'third_party/khronos' \
+	'third_party/leveldatabase' \
+	'third_party/libXNVCtrl' \
+	'third_party/libaddressinput' \
+	'third_party/libjingle' \
+	'third_party/libphonenumber' \
+	'third_party/libsecret' \
+	'third_party/libsrtp' \
+	'third_party/libudev' \
+	'third_party/libusb' \
+	'third_party/libvpx_new' \
+	'third_party/libvpx_new/source/libvpx/third_party/x86inc' \
+	'third_party/libxml/chromium' \
+	'third_party/libwebm' \
+	'third_party/libyuv' \
+	'third_party/lss' \
+	'third_party/lzma_sdk' \
+	'third_party/mesa' \
+	'third_party/modp_b64' \
+	'third_party/mojo' \
+	'third_party/mt19937ar' \
+	'third_party/npapi' \
+	'third_party/openmax_dl' \
+	'third_party/opus' \
+	'third_party/ots' \
+	'third_party/pdfium' \
+	'third_party/pdfium/third_party/agg23' \
+	'third_party/pdfium/third_party/base' \
+	'third_party/pdfium/third_party/bigint' \
+	'third_party/pdfium/third_party/freetype' \
+	'third_party/pdfium/third_party/lcms2-2.6' \
+	'third_party/pdfium/third_party/libjpeg' \
+	'third_party/pdfium/third_party/libopenjpeg20' \
+	'third_party/pdfium/third_party/zlib_v128' \
+	'third_party/polymer' \
+	'third_party/protobuf' \
+	'third_party/ply' \
+	'third_party/qcms' \
+	'third_party/readability' \
+	'third_party/sfntly' \
+	'third_party/skia' \
+	'third_party/smhasher' \
+	'third_party/sqlite' \
+	'third_party/tcmalloc' \
+	'third_party/usrsctp' \
+	'third_party/web-animations-js' \
+	'third_party/webdriver' \
+	'third_party/webrtc' \
+	'third_party/widevine' \
+	'third_party/x86inc' \
+	'third_party/zlib/google' \
+	'url/third_party/mozilla' \
+	'v8/src/third_party/fdlibm' \
+	'v8/src/third_party/valgrind' \
+	--do-remove
+
 # Look, I don't know. This package is spit and chewing gum. Sorry.
-rm -rf third_party/jinja2 third_party/markupsafe
+rm -rf third_party/jinja2
 ln -s %{python_sitelib}/jinja2 third_party/jinja2
+rm -rf third_party/markupsafe
 ln -s %{python_sitearch}/markupsafe third_party/markupsafe
+# We should look on removing other python packages as well i.e. ply
 
 # Fix hardcoded path in remoting code
 sed -i 's|/opt/google/chrome-remote-desktop|%{crd_path}|g' remoting/host/setup/daemon_controller_delegate_linux.cc
@@ -720,11 +845,15 @@ mkdir -p %{buildroot}%{_datadir}/gnome-control-center/default-apps/
 cp -a %{SOURCE9} %{buildroot}%{_datadir}/gnome-control-center/default-apps/
 
 %check
-%if %{tests}
+%if 0%{tests}
+%if 0%{?tests_force_display}
+	export DISPLAY=:0
+%else
 	Xvfb :9 -screen 0 1024x768x24 &
 
 	export XVFB_PID=$!
 	export DISPLAY=:9
+%endif
 	export LC_ALL="en_US.utf8"
 
 	sleep 5
@@ -732,7 +861,7 @@ cp -a %{SOURCE9} %{buildroot}%{_datadir}/gnome-control-center/default-apps/
 	# Run tests and disable the failed ones
 	pushd %{target}
 	(
-	cp chrome_sandbox chrome-sandbox
+	cp -f chrome_sandbox chrome-sandbox
 	echo "Test sandbox needs to be owned by root and have the suid set"
 	if [ "$(id -u)" != "0" ]; then
 		sudo chown root:root chrome-sandbox && sudo chmod 4755 chrome-sandbox
@@ -755,13 +884,13 @@ cp -a %{SOURCE9} %{buildroot}%{_datadir}/gnome-control-center/default-apps/
 	./app_list_unittests && \
 	./app_shell_unittests && \
 	./aura_unittests && \
-	./base_unittests && \
+	./base_unittests \
 		--gtest_filter=-"\
 			`#failed`\
 			ICUStringConversionsTest.ConvertToUtf8AndNormalize\
 		" \
 	&& \
-	./browser_tests && \
+	./browser_tests \
 		--gtest_filter=-"\
 			`#failed`\
 			DevToolsSanityTest.TestNetworkRawHeadersText:\
@@ -789,7 +918,7 @@ cp -a %{SOURCE9} %{buildroot}%{_datadir}/gnome-control-center/default-apps/
 	./cast_unittests && \
 	./cc_unittests && \
 	./chromedriver_unittests && \
-	./components_unittests && \
+	./components_unittests \
 		--gtest_filter=-"\
 			`#failed`\
 			AutocompleteMatchTest.Duplicates:\
@@ -804,14 +933,14 @@ cp -a %{SOURCE9} %{buildroot}%{_datadir}/gnome-control-center/default-apps/
 			UrlFormatterTest.IDNToUnicodeSlow\
 		" \
 	&& \
-	./components_browsertests && \
+	./components_browsertests \
 		--gtest_filter=-"\
 			`#failed`\
 			AutofillRiskFingerprintTest.GetFingerprint\
 		" \
 	&& \
 	./compositor_unittests && \
-	./content_browsertests && \
+	./content_browsertests \
 		--gtest_filter=-"\
 			`#failed`\
 			BrowserGpuChannelHostFactoryTest.:\
@@ -834,7 +963,7 @@ cp -a %{SOURCE9} %{buildroot}%{_datadir}/gnome-control-center/default-apps/
 	&& \
 	./content_unittests && \
 	./crypto_unittests && \
-	./dbus_unittests && \
+	./dbus_unittests \
 		--gtest_filter=-"\
 			`#crashed`\
 			EndToEndAsyncTest.InvalidObjectPath:\
@@ -883,7 +1012,7 @@ cp -a %{SOURCE9} %{buildroot}%{_datadir}/gnome-control-center/default-apps/
 		" \
 	&& \
 	./gl_unittests && \
-	./gn_unittests && \
+	./gn_unittests \
 		--gtest_filter=-"\
 			`#failed`\
 			Format.004:\
@@ -900,7 +1029,7 @@ cp -a %{SOURCE9} %{buildroot}%{_datadir}/gnome-control-center/default-apps/
 			Format.031:\
 			Format.033:\
 			Format.038:\
-			Fnormat.043:\
+			Format.043:\
 			Format.046:\
 			Format.048:\
 			Format.056:\
@@ -918,7 +1047,7 @@ cp -a %{SOURCE9} %{buildroot}%{_datadir}/gnome-control-center/default-apps/
 	&& \
 	./google_apis_unittests && \
 	./gpu_unittests && \
-	./interactive_ui_tests && \
+	./interactive_ui_tests \
 		--gtest_filter=-"\
 			`#failed`\
 			AshNativeCursorManagerTest.CursorChangeOnEnterNotify:\
@@ -950,7 +1079,7 @@ cp -a %{SOURCE9} %{buildroot}%{_datadir}/gnome-control-center/default-apps/
 %if 0%{?nacl}
 	./nacl_loader_unittests && \
 %endif
-	./net_unittests && \
+	./net_unittests \
 		--gtest_filter=-"\
 			`#failed`\
 			CertVerifyProcTest.TestKnownRoot\
@@ -965,7 +1094,7 @@ cp -a %{SOURCE9} %{buildroot}%{_datadir}/gnome-control-center/default-apps/
 	./ui_base_unittests && \
 	./ui_touch_selection_unittests && \
 	./sync_unit_tests && \
-	./unit_tests && \
+	./unit_tests \
 		--gtest_filter=-"\
 			`#failed - some need https://chromium.googlesource.com/chromium/deps/hunspell_dictionaries/+/master`\
 			BookmarkProviderTest.StripHttpAndAdjustOffsets:\
@@ -1000,7 +1129,7 @@ cp -a %{SOURCE9} %{buildroot}%{_datadir}/gnome-control-center/default-apps/
 		" \
 	&& \
 	./url_unittests && \
-	./views_unittests && \
+	./views_unittests \
 		--gtest_filter=-"\
 			`#failed`\
 			DesktopWindowTreeHostX11HighDPITest.LocatedEventDispatchWithCapture:\
@@ -1009,18 +1138,21 @@ cp -a %{SOURCE9} %{buildroot}%{_datadir}/gnome-control-center/default-apps/
 		" \
 	&& \
 	./wm_unittests \
-	) || (kill $XVFB_PID || unset XVFB_PID)
+	)
 	popd
 
-	kill $XVFB_PID
-	unset XVFB_PID
+	if [ -n "$XVFB_PID" ]; then
+		kill $XVFB_PID
+		unset XVFB_PID
+		unset DISPLAY
+	fi
 %endif
 
 %clean
 rm -rf %{buildroot}
 
 %post
-# Set SELinux labels - semanage itself will adujust the lib directory naming
+# Set SELinux labels - semanage itself will adjust the lib directory naming
 semanage fcontext -a -t bin_t /usr/lib/%{chromium_browser_channel}
 semanage fcontext -a -t bin_t /usr/lib/%{chromium_browser_channel}/%{chromium_browser_channel}.sh
 semanage fcontext -a -t chrome_sandbox_exec_t /usr/lib/chrome-sandbox
@@ -1049,7 +1181,7 @@ getent group chrome-remote-desktop >/dev/null || groupadd -r chrome-remote-deskt
 %systemd_preun chrome-remote-desktop.service
 
 %postun -n chrome-remote-desktop
-%systemd_postun_with_restart chrome-remote-desktop.service 
+%systemd_postun_with_restart chrome-remote-desktop.service
 
 %files
 %defattr(-,root,root,-)
@@ -1095,11 +1227,11 @@ getent group chrome-remote-desktop >/dev/null || groupadd -r chrome-remote-deskt
 %{crd_path}/lib
 %endif
 %{crd_path}/native-messaging-host
-%{crd_path}/remote-assistance-host 
+%{crd_path}/remote-assistance-host
 %{_sysconfdir}/pam.d/chrome-remote-desktop
 %{_sysconfdir}/chromium/native-messaging-hosts/
 %{_sysconfdir}/opt/chrome/
-%{crd_path}/remoting_locales/ 
+%{crd_path}/remoting_locales/
 %{crd_path}/start-host
 %{_unitdir}/chrome-remote-desktop.service
 /var/lib/chrome-remote-desktop/
@@ -1110,6 +1242,21 @@ getent group chrome-remote-desktop >/dev/null || groupadd -r chrome-remote-deskt
 %endif
 
 %changelog
+* Thu Jan 07 2016 Tomas Popela <tpopela@redhat.com> 47.0.2526.106-2
+- compare hashes when downloading the tarballs
+- Google started to include the Debian sysroots in tarballs - remove them while
+  processing the tarball
+- add a way to not use the system display server for tests instead of Xvfb
+- update the depot_tools checkout to get some GN fixes
+- use the remove_bundled_libraries script
+- update the clean_ffmpeg script to print errors when some files that we are
+  processing are missing
+- update the clean_ffmpeg script to operate on tarball's toplevel folder
+- don't show comments as removed tests in get_linux_tests_names script
+- rework the process_ffmpeg_gyp script (also rename it to
+  get_free_ffmpeg_source_files) to use the GN files insted of GYP (but we still
+  didn't switched to GN build)
+
 * Wed Dec 16 2015 Tom Callaway <spot@fedoraproject.org> 47.0.2526.106-1
 - update to 47.0.2526.106
 

@@ -31,6 +31,7 @@ import sys
 import os
 
 if __name__ == "__main__":
+
   added = []
 
   # Create the parser object
@@ -98,7 +99,8 @@ if __name__ == "__main__":
               found = True
               break
           if not found:
-            removed.append(line)
+            if not "%" in line:
+              removed.append(line)
 
     for test in removed:
       print "REMOVED"

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2013 Tomas Popela <tpopela@redhat.com>
+# Copyright 2013-2015 Tomas Popela <tpopela@redhat.com>
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
 # "Software"), to deal in the Software without restriction, including
@@ -19,14 +19,40 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+# $1 files
+# $2 verbose
+function copy_files() {
+	for file in $1
+	do
+		dir_name=`echo $file | sed 's%/[^/]*$%/%'`
+		if [[ $dir_name == */* ]]; then
+			tmp_dir_name="tmp_"$dir_name
+			mkdir -p ../tmp_ffmpeg/$tmp_dir_name
+		else
+			tmp_dir_name=$file
+		fi
+
+		if [ "$2" -eq 1 ]; then
+			cp $file ../tmp_ffmpeg/$tmp_dir_name
+		else
+			cp $file ../tmp_ffmpeg/$tmp_dir_name > /dev/null 2>&1
+		fi
+	done
+}
+
 where=`pwd`
 
-generated_files=`./process_ffmpeg_gyp.py $1 $2`
+generated_files=`./get_free_ffmpeg_source_files.py $1 $2`
+# As the build system files does not contain the header files, cheat here
+# and generate the header files names from source files. These that does not
+# exist will be later skipped while copying.
 generated_files_headers="${generated_files//.c/.h}"
-generated_files_headers="${generated_files_headers//.S/.h}"
-generated_files_headers="${generated_files_headers//.asm/.h}"
+if [ "$2" -ne "1" ]; then
+	generated_files_headers="$generated_files_headers ${generated_files_headers//.S/.h}"
+fi
+generated_files_headers="$generated_files_headers ${generated_files_headers//.asm/.h}"
 
-cd $1
+cd $1/third_party/ffmpeg
 
 header_files="	libavcodec/x86/inline_asm.h \
 		libavcodec/x86/mathops.h \
@@ -132,47 +158,39 @@ manual_files="	libavcodec/x86/hpeldsp_rnd_template.c \
 		libavcodec/fft_template.c \
 		libavcodec/h264pred_template.c \
 		libavcodec/hpel_template.c \
-		libavcodec/hpeldsp_template.c \
 		libavcodec/mdct_template.c \
 		libavcodec/pel_template.c \
 		libavcodec/videodsp_template.c \
 		libavutil/x86/x86inc.asm \
 		libavutil/x86/x86util.asm "
 
-other_files="	Changelog \
+other_files="	BUILD.gn \
+		Changelog \
 		COPYING.GPLv2 \
 		COPYING.GPLv3 \
 		COPYING.LGPLv2.1 \
 		COPYING.LGPLv3 \
 		CREDITS \
-		ffmpeg_generated.gypi \
+		CREDITS.chromium \
 		ffmpeg.gyp \
+		ffmpeg_generated.gypi \
+		ffmpeg_generated.gni \
+		ffmpeg_options.gni \
 		ffmpegsumo.ver \
-		INSTALL \
-		LICENSE \
+		INSTALL.md \
+		LICENSE.md \
 		MAINTAINERS \
 		OWNERS \
-		README \
 		README.chromium \
+		README.md \
 		RELEASE \
 		xcode_hack.c "
 
-files=$generated_files$manual_files$other_files$generated_files_headers$header_files
-
-prefix="tmp_"
-
-for f in $files
-	do
-		dir_name=`echo $f | sed 's%/[^/]*$%/%'`
-		if [[ $dir_name == */* ]]; then
-			tmp_dir_name=$prefix$dir_name
-			mkdir -p ../tmp_ffmpeg/$tmp_dir_name
-		else
-			tmp_dir_name=$f
-		fi
-
-		cp $f ../tmp_ffmpeg/$tmp_dir_name 2>/dev/null
-	done
+copy_files "$generated_files" 0
+copy_files "$generated_files_headers" 0
+copy_files "$manual_files" 1
+copy_files "$other_files" 1
+copy_files "$header_files" 1
 
 mkdir -p ../tmp_ffmpeg/tmp_chromium/config
 cp -r chromium/config ../tmp_ffmpeg/tmp_chromium

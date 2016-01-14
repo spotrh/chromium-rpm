@@ -279,10 +279,6 @@ if __name__ == '__main__':
       print "%s is possibly corrupted, exiting." % (latest)
       sys.exit(1)
 
-  # We really don't need these on Fedora. */
-  delete_chromium_dir ('build/linux/debian_wheezy_amd64-sysroot')
-  delete_chromium_dir ('build/linux/debian_wheezy_i386-sysroot')
-
   if (args.cleansources):
     junk_dirs = ['third_party/WebKit/Tools/Scripts/webkitpy/layout_tests',
                  'webkit/data/layout_tests', 'third_party/hunspell/dictionaries',

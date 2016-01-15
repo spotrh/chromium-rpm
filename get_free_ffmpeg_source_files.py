@@ -34,12 +34,11 @@ def parse_sources(input_sources, output_sources, arch_not_arm):
   # Get the type of sources in one group and sources itself in the other one.
   blocks = re.findall(r"(ffmpeg[^\s]*).*?\[(.*?)]", input_sources, re.DOTALL)
   for block in blocks:
-    for sources_type in block[0]:
-      if (arch_not_arm):
-        if not 'ffmpeg_gas_sources' in sources_type:
-          append_sources (block[1], output_sources)
-      else:
+    if (arch_not_arm):
+      if not 'ffmpeg_gas_sources' in block[0]:
         append_sources (block[1], output_sources)
+    else:
+      append_sources (block[1], output_sources)
 
 
 def parse_ffmpeg_gyni_file(gyni_path, arch_not_arm):

@@ -47,12 +47,11 @@ generated_files=`./get_free_ffmpeg_source_files.py $1 $2`
 # and generate the header files names from source files. These that does not
 # exist will be later skipped while copying.
 generated_files_headers="${generated_files//.c/.h}"
+generated_files_headers="$generated_files_headers ${generated_files//.c/_internal.h}"
 if [ "$2" -ne "1" ]; then
-	generated_files_headers="$generated_files_headers ${generated_files_headers//.S/.h}"
+	generated_files_headers="$generated_files_headers ${generated_files//.S/.h}"
 fi
-generated_files_headers="$generated_files_headers ${generated_files_headers//.asm/.h}"
-
-cd $1/third_party/ffmpeg
+generated_files_headers="$generated_files_headers ${generated_files//.asm/.h}"
 
 header_files="	libavcodec/x86/inline_asm.h \
 		libavcodec/x86/mathops.h \
@@ -61,7 +60,6 @@ header_files="	libavcodec/x86/inline_asm.h \
 		libavcodec/blockdsp.h \
 		libavcodec/bytestream.h \
 		libavcodec/dct.h \
-		libavcodec/dv_profile_internal.h \
 		libavcodec/error_resilience.h \
 		libavcodec/fdctdsp.h \
 		libavcodec/fft.h \
@@ -86,7 +84,6 @@ header_files="	libavcodec/x86/inline_asm.h \
 		libavcodec/pcm_tablegen.h \
 		libavcodec/pixblockdsp.h \
 		libavcodec/pixels.h \
-		libavcodec/pthread_internal.h \
 		libavcodec/put_bits.h \
 		libavcodec/qpeldsp.h \
 		libavcodec/ratecontrol.h \
@@ -95,13 +92,11 @@ header_files="	libavcodec/x86/inline_asm.h \
 		libavcodec/rnd_avg.h \
 		libavcodec/thread.h \
 		libavcodec/version.h \
-		libavcodec/vorbis_parser_internal.h
 		libavcodec/vp3data.h \
 		libavcodec/vp56.h \
 		libavcodec/vp56dsp.h \
 		libavcodec/vp8data.h \
 		libavformat/audiointerleave.h \
-		libavformat/avio_internal.h \
 		libavformat/avformat.h \
 		libavformat/dv.h \
 		libavformat/internal.h \
@@ -128,11 +123,10 @@ header_files="	libavcodec/x86/inline_asm.h \
 		libavutil/avassert.h \
 		libavutil/avutil.h \
 		libavutil/bswap.h \
-		libavutil/buffer_internal.h \
 		libavutil/common.h \
 		libavutil/colorspace.h \
-		libavutil/cpu_internal.h \
 		libavutil/cpu.h \
+		libavutil/cpu_internal.h \
 		libavutil/dynarray.h \
 		libavutil/internal.h \
 		libavutil/intfloat.h \
@@ -140,11 +134,10 @@ header_files="	libavcodec/x86/inline_asm.h \
 		libavutil/libm.h \
 		libavutil/lls.h \
 		libavutil/macros.h \
-		libavutil/mem_internal.h \
 		libavutil/pixfmt.h \
+		libavutil/qsort.h \
 		libavutil/replaygain.h \
 		libavutil/thread.h \
-		libavutil/time_internal.h \
 		libavutil/timer.h \
 		libavutil/timestamp.h \
 		libavutil/version.h \
@@ -186,6 +179,8 @@ other_files="	BUILD.gn \
 		RELEASE \
 		xcode_hack.c "
 
+cd $1/third_party/ffmpeg
+
 copy_files "$generated_files" 0
 copy_files "$generated_files_headers" 0
 copy_files "$manual_files" 1
@@ -202,8 +197,7 @@ for tmp_directory in $(find . -type d -name 'tmp_*')
 		mv $tmp_directory $new_name
 	done
 
-cd ..
-rm -rf ffmpeg
-mv tmp_ffmpeg ffmpeg
-
 cd $where
+
+rm -rf $1/third_party/ffmpeg
+mv $1/third_party/tmp_ffmpeg $1/third_party/ffmpeg

@@ -470,9 +470,7 @@ export CHROMIUM_BROWSER_GYP_DEFINES="\
 	-Duse_system_protobuf=0 \
 	-Duse_system_re2=1 \
 	-Duse_system_speex=1 \
-%if 0
-	-Duse_system_libsrtp=1 \
-%endif
+	-Duse_system_libsrtp=0 \
 	-Duse_system_xdg_utils=1 \
 	-Duse_system_yasm=1 \
 	-Duse_system_zlib=0 \
@@ -529,6 +527,7 @@ build/linux/unbundle/remove_bundled_libraries.py \
 	'third_party/libevent' \
 	'third_party/libjpeg_turbo' \
 	'third_party/libpng' \
+	'third_party/libsrtp' \
 	'third_party/libwebp' \
 	'third_party/libxml' \
 	'third_party/libxslt' \

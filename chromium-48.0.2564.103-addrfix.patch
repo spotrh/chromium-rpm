@@ -1,0 +1,11 @@
+diff -up chromium-48.0.2564.103/third_party/boringssl/boringssl.gyp.addrfix chromium-48.0.2564.103/third_party/boringssl/boringssl.gyp
+--- chromium-48.0.2564.103/third_party/boringssl/boringssl.gyp.addrfix	2016-02-12 14:29:33.522339586 -0500
++++ chromium-48.0.2564.103/third_party/boringssl/boringssl.gyp	2016-02-12 14:33:56.888314290 -0500
+@@ -17,6 +17,7 @@
+       'defines': [
+         'BORINGSSL_IMPLEMENTATION',
+         'BORINGSSL_NO_STATIC_INITIALIZER',
++        '_POSIX_C_SOURCE=200112L',
+         'OPENSSL_SMALL',
+       ],
+       # TODO(davidben): Fix size_t truncations in BoringSSL.

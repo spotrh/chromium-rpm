@@ -34,8 +34,8 @@
 %global chromoting_client_id 449907151817-8vnlfih032ni8c4jjps9int9t86k546t.apps.googleusercontent.com 
 
 Name:		chromium%{chromium_channel}
-Version:	47.0.2526.106
-Release:	2%{?dist}
+Version:	48.0.2564.103
+Release:	1%{?dist}
 Summary:	A WebKit (Blink) powered web browser
 Url:		http://www.chromium.org/Home
 License:	BSD and LGPLv2+ and ASL 2.0 and IJG and MIT and GPLv2+ and ISC and OpenSSL and (MPLv1.1 or GPLv2 or LGPLv2)
@@ -44,7 +44,7 @@ Group:		Applications/Internet
 ### Chromium Fedora Patches ###
 Patch0:		chromium-46.0.2490.71-gcc5.patch
 Patch1:		chromium-45.0.2454.101-linux-path-max.patch
-Patch2:		chromium-45.0.2454.101-addrfix.patch
+Patch2:		chromium-48.0.2564.103-addrfix.patch
 # Google patched their bundled copy of icu 54 to include API functionality that wasn't added until 55.
 # :P
 Patch3:		chromium-45.0.2454.101-system-icu-54-does-not-have-detectHostTimeZone.patch
@@ -162,7 +162,10 @@ BuildRequires:	libicu-devel >= 5.4
 %endif
 BuildRequires:	libjpeg-devel
 BuildRequires:	libpng-devel
+%if 0
+# see https://code.google.com/p/chromium/issues/detail?id=501318
 BuildRequires:	libsrtp-devel >= 1.4.4
+%endif
 BuildRequires:	libudev-devel
 Requires:	libusbx >= 1.0.20-1
 BuildRequires:	libusbx-devel >= 1.0.20-1
@@ -251,6 +254,7 @@ Provides: bundled(leveldb) = r80
 Provides: bundled(libaddressinput) = 0
 Provides: bundled(libjingle) = 9564
 Provides: bundled(libphonenumber) = svn584
+Provides: bundled(libsrtp) = 1.5.2
 Provides: bundled(libvpx) = 1.4.0
 Provides: bundled(libwebp) = 0.4.3
 Provides: bundled(libXNVCtrl) = 302.17
@@ -466,7 +470,9 @@ export CHROMIUM_BROWSER_GYP_DEFINES="\
 	-Duse_system_protobuf=0 \
 	-Duse_system_re2=1 \
 	-Duse_system_speex=1 \
+%if 0
 	-Duse_system_libsrtp=1 \
+%endif
 	-Duse_system_xdg_utils=1 \
 	-Duse_system_yasm=1 \
 	-Duse_system_zlib=0 \
@@ -560,9 +566,6 @@ build/linux/unbundle/remove_bundled_libraries.py \
 	'third_party/catapult/tracing/third_party/d3' \
 	'third_party/catapult/tracing/third_party/gl-matrix' \
 	'third_party/catapult/tracing/third_party/jszip' \
-	'third_party/catapult/tracing/third_party/tvcm' \
-	'third_party/catapult/tracing/third_party/tvcm/third_party/rcssmin' \
-	'third_party/catapult/tracing/third_party/tvcm/third_party/rjsmin' \
 	'third_party/cld_2' \
 	'third_party/cros_system_api' \
 	'third_party/cython/python_flags.py' \
@@ -584,7 +587,6 @@ build/linux/unbundle/remove_bundled_libraries.py \
 	'third_party/libjingle' \
 	'third_party/libphonenumber' \
 	'third_party/libsecret' \
-	'third_party/libsrtp' \
 	'third_party/libudev' \
 	'third_party/libusb' \
 	'third_party/libvpx_new' \
@@ -615,7 +617,6 @@ build/linux/unbundle/remove_bundled_libraries.py \
 	'third_party/protobuf' \
 	'third_party/ply' \
 	'third_party/qcms' \
-	'third_party/readability' \
 	'third_party/sfntly' \
 	'third_party/skia' \
 	'third_party/smhasher' \
@@ -1242,6 +1243,16 @@ getent group chrome-remote-desktop >/dev/null || groupadd -r chrome-remote-deskt
 %endif
 
 %changelog
+* Mon Feb  8 2016 Tom Callaway <spot@fedoraproject.org> 48.0.2564.103-1
+- update to 48.0.2564.103
+- use bundled libsrtp (because upstream has coded themselves into an ugly corner)
+
+* Fri Jan 22 2016 Tom Callaway <spot@fedoraproject.org> 48.0.2564.82-1
+- update to 48.0.2564.82
+
+* Fri Jan 15 2016 Tom Callaway <spot@fedoraproject.org> 47.0.2526.111-1
+- update to 47.0.2526.111
+
 * Thu Jan 07 2016 Tomas Popela <tpopela@redhat.com> 47.0.2526.106-2
 - compare hashes when downloading the tarballs
 - Google started to include the Debian sysroots in tarballs - remove them while

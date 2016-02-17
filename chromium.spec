@@ -181,9 +181,13 @@ BuildRequires:	nspr-devel
 BuildRequires:	opus-devel
 BuildRequires:	perl(Switch)
 BuildRequires:	pulseaudio-libs-devel
+BuildRequires:	python-beautifulsoup4
+BuildRequires:	python-BeautifulSoup
+BuildRequires:	python-html5lib
 BuildRequires:	python-jinja2
 BuildRequires:	python-markupsafe
 BuildRequires:	python-ply
+BuildRequires:	python-simplejson
 Requires:	re2 >= 20131024
 BuildRequires:	re2-devel >= 20131024
 BuildRequires:	speech-dispatcher-devel
@@ -551,12 +555,15 @@ build/linux/unbundle/remove_bundled_libraries.py \
 	'chrome/third_party/mozilla_security_manager' \
 	'courgette/third_party' \
 	'crypto/third_party/nss' \
+	'native_client/src/third_party/dlmalloc' \
 	'net/third_party/mozilla_security_manager' \
 	'net/third_party/nss' \
 	'third_party/WebKit' \
 	'third_party/analytics' \
 	'third_party/angle' \
 	'third_party/angle/src/third_party/compiler' \
+	'third_party/angle/src/third_party/murmurhash' \
+	'third_party/angle/src/third_party/trace_event' \
 	'third_party/boringssl' \
 	'third_party/brotli' \
 	'third_party/cacheinvalidation' \
@@ -565,6 +572,9 @@ build/linux/unbundle/remove_bundled_libraries.py \
 	'third_party/catapult/tracing/third_party/d3' \
 	'third_party/catapult/tracing/third_party/gl-matrix' \
 	'third_party/catapult/tracing/third_party/jszip' \
+	'third_party/catapult/third_party/py_vulcanize' \
+	'third_party/catapult/third_party/py_vulcanize/third_party/rcssmin' \
+	'third_party/catapult/third_party/py_vulcanize/third_party/rjsmin' \
 	'third_party/cld_2' \
 	'third_party/cros_system_api' \
 	'third_party/cython/python_flags.py' \
@@ -726,7 +736,7 @@ export CHROMIUM_BROWSER_UNIT_TESTS=
 
 %global target out/Release
 
-../depot_tools/ninja -C %{target} -vvv chrome chrome_sandbox $CHROMIUM_BROWSER_UNIT_TESTS
+../depot_tools/ninja -C %{target} -vvv chrome chrome_sandbox policy_templates $CHROMIUM_BROWSER_UNIT_TESTS
 
 # remote client
 pushd remoting
@@ -833,7 +843,10 @@ sed -i 's|@@CRD_PATH@@|%{crd_path}|g' %{buildroot}%{_unitdir}/chrome-remote-desk
 mkdir -p %{buildroot}%{_sysconfdir}/chromium/policies/managed
 mkdir -p %{buildroot}%{_sysconfdir}/chromium/policies/recommended
 cp -a ../%{name}-policies/common/html/en-US/*.html .
-cp -a ../%{name}-policies/linux/examples/*.json .
+
+# linux json files no longer in .zip file
+#cp -a ../%{name}-policies/linux/examples/*.json .
+cp -a out/Release/gen/chrome/app/policy/linux/examples/chrome.json .
 
 mkdir -p %{buildroot}%{_datadir}/icons/hicolor/256x256/apps
 cp -a chrome/app/theme/chromium/product_logo_256.png %{buildroot}%{_datadir}/icons/hicolor/256x256/apps/%{chromium_browser_channel}.png

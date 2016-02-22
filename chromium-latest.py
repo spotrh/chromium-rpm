@@ -128,7 +128,7 @@ def download_file_and_compare_hashes(file_to_download):
     urllib.urlcleanup()
     print ""
     if (info["Content-Type"] != "application/x-tar"):
-      print 'Chromium %s tarballs are not on servers.' % version
+      print 'Chromium tarballs for %s are not on servers.' % file_to_download
       remove_file_if_exists (file_to_download)
       sys.exit(1)
 

@@ -764,7 +764,7 @@ export CHROMIUM_BROWSER_CHANNEL=%{chromium_browser_channel}
 sed -i "s|@@BUILDTARGET@@|$BUILDTARGET|g" %{buildroot}%{chromium_path}/%{chromium_browser_channel}.sh
 sed -i "s|@@CHROMIUM_PATH@@|$CHROMIUM_PATH|g" %{buildroot}%{chromium_path}/%{chromium_browser_channel}.sh
 sed -i "s|@@CHROMIUM_BROWSER_CHANNEL@@|$CHROMIUM_BROWSER_CHANNEL|g" %{buildroot}%{chromium_path}/%{chromium_browser_channel}.sh
-%if %{?chromium_channel:1}%{!?chromium_channel:0}
+%if "%{chromium_channel}" == "%%{nil}"
 # Enable debug outputs for beta and dev channels
 export EXTRA_FLAGS="--enable-logging=stderr --v=2"
 sed -i "s|@@EXTRA_FLAGS@@|$EXTRA_FLAGS|g" %{buildroot}%{chromium_path}/%{chromium_browser_channel}.sh

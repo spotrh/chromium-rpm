@@ -35,7 +35,7 @@
 
 Name:		chromium%{chromium_channel}
 Version:	48.0.2564.103
-Release:	1%{?dist}
+Release:	2%{?dist}
 Summary:	A WebKit (Blink) powered web browser
 Url:		http://www.chromium.org/Home
 License:	BSD and LGPLv2+ and ASL 2.0 and IJG and MIT and GPLv2+ and ISC and OpenSSL and (MPLv1.1 or GPLv2 or LGPLv2)
@@ -59,6 +59,9 @@ Patch5:		chromium-46.0.2490.80-cast_link_zlib.patch
 Patch6:		chromium-47.0.2526.80-pnacl-fgnu-inline-asm.patch
 # Ignore broken nacl open fd counter
 Patch7:		chromium-47.0.2526.80-nacl-ignore-broken-fd-counter.patch
+# Fixups for gcc6
+Patch8:		chromium-48.0.2564.103-gcc6.patch
+
 
 ### Chromium Tests Patches ###
 Patch100:	chromium-46.0.2490.86-use_system_opus.patch
@@ -331,6 +334,7 @@ Remote desktop support for google-chrome & chromium.
 %patch5 -p1 -b .cast_link_zlib
 %patch6 -p1 -b .gnu-inline
 %patch7 -p1 -b .ignore-fd-count
+%patch8 -p1 -b .gcc6
 
 ### Chromium Tests Patches ###
 %patch100 -p1 -b .use_system_opus
@@ -1255,6 +1259,9 @@ getent group chrome-remote-desktop >/dev/null || groupadd -r chrome-remote-deskt
 %endif
 
 %changelog
+* Wed Feb 17 2016 Tom Callaway <spot@fedoraproject.org> 48.0.2564.103-2
+- fixes for gcc6
+
 * Mon Feb  8 2016 Tom Callaway <spot@fedoraproject.org> 48.0.2564.103-1
 - update to 48.0.2564.103
 - use bundled libsrtp (because upstream has coded themselves into an ugly corner)

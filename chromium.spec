@@ -24,6 +24,15 @@
  %endif
 %endif
 
+%if 0%{?fedora} >= 22 && 0%{?fedora} < 24
+# Chromium needs icu 5.4 now, which isn't in older Fedora.
+# And F24+ is "too new". Sigh.
+BuildRequires:  libicu-devel >= 5.4
+%global bundleicu 0
+%else
+%global bundleicu 1
+%endif
+
 ### Google API keys (see http://www.chromium.org/developers/how-tos/api-keys)
 ### Note: These are for Fedora use ONLY.
 ### For your own distribution, please get your own set of keys.
@@ -34,8 +43,8 @@
 %global chromoting_client_id 449907151817-8vnlfih032ni8c4jjps9int9t86k546t.apps.googleusercontent.com 
 
 Name:		chromium%{chromium_channel}
-Version:	48.0.2564.103
-Release:	2%{?dist}
+Version:	48.0.2564.116
+Release:	1%{?dist}
 Summary:	A WebKit (Blink) powered web browser
 Url:		http://www.chromium.org/Home
 License:	BSD and LGPLv2+ and ASL 2.0 and IJG and MIT and GPLv2+ and ISC and OpenSSL and (MPLv1.1 or GPLv2 or LGPLv2)
@@ -61,6 +70,8 @@ Patch6:		chromium-47.0.2526.80-pnacl-fgnu-inline-asm.patch
 Patch7:		chromium-47.0.2526.80-nacl-ignore-broken-fd-counter.patch
 # Fixups for gcc6
 Patch8:		chromium-48.0.2564.103-gcc6.patch
+# Use libusb_interrupt_event_handler from current libusbx (1.0.21-0.1.git448584a)
+Patch9:		chromium-48.0.2564.116-libusb_interrupt_event_handler.patch
 
 
 ### Chromium Tests Patches ###
@@ -156,12 +167,12 @@ BuildRequires:	jsoncpp-devel
 BuildRequires:	kernel-headers
 BuildRequires:	libevent-devel
 BuildRequires:	libexif-devel
-%if 0%{?fedora} >= 22
-# Chromium needs icu 5.4 now, which isn't in older Fedora.
-BuildRequires:	libicu-devel >= 5.4
-%global bundleicu 0
+%if 0%{?bundleicu}
+# If this is true, we're using the bundled icu.
+# We'd like to use the system icu every time, but we cannot always do that.
 %else
-%global bundleicu 1
+# Not newer than 5.4 (at least not right now)
+BuildRequires:	libicu-devel = 5.4
 %endif
 BuildRequires:	libjpeg-devel
 BuildRequires:	libpng-devel
@@ -170,8 +181,8 @@ BuildRequires:	libpng-devel
 BuildRequires:	libsrtp-devel >= 1.4.4
 %endif
 BuildRequires:	libudev-devel
-Requires:	libusbx >= 1.0.20-1
-BuildRequires:	libusbx-devel >= 1.0.20-1
+Requires:	libusbx >= 1.0.21-0.1.git448584a
+BuildRequires:	libusbx-devel >= 1.0.21-0.1.git448584a
 # We don't use libvpx anymore because Chromium loves to
 # use bleeding edge revisions here that break other things
 # ... so we just use the bundled libvpx.
@@ -335,6 +346,7 @@ Remote desktop support for google-chrome & chromium.
 %patch6 -p1 -b .gnu-inline
 %patch7 -p1 -b .ignore-fd-count
 %patch8 -p1 -b .gcc6
+%patch9 -p1 -b .modern-libusbx
 
 ### Chromium Tests Patches ###
 %patch100 -p1 -b .use_system_opus
@@ -460,7 +472,8 @@ export CHROMIUM_BROWSER_GYP_DEFINES="\
 	-Duse_system_bzip2=1 \
 	-Duse_system_flac=1 \
 	-Duse_system_harfbuzz=1 \
-%if 0%{?fedora} >= 22
+%if 0%{?bundleicu}
+%else
 	-Duse_system_icu=1 \
 %endif
 	-Dicu_use_data_file_flag=0 \
@@ -665,6 +678,9 @@ build/linux/unbundle/replace_gyp_files.py $CHROMIUM_BROWSER_GYP_DEFINES
 build/gyp_chromium \
 	--depth . \
 	$CHROMIUM_BROWSER_GYP_DEFINES
+
+# hackity hack hack
+rm -rf third_party/libusb/src/libusb/libusb.h
 
 %build
 
@@ -1259,6 +1275,11 @@ getent group chrome-remote-desktop >/dev/null || groupadd -r chrome-remote-deskt
 %endif
 
 %changelog
+* Wed Feb 24 2016 Tom Callaway <spot@fedoraproject.org> 48.0.2564.116-1
+- Update to 48.0.2564.116
+- conditionalize icu properly
+- fix libusbx handling (bz1270324)
+
 * Wed Feb 17 2016 Tom Callaway <spot@fedoraproject.org> 48.0.2564.103-2
 - fixes for gcc6
 

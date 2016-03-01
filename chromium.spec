@@ -531,6 +531,7 @@ export CHROMIUM_BROWSER_GYP_DEFINES="\
 	-Dremove_webcore_debug_symbols=1 \
 	-Dlogging_like_official_build=1 \
 	-Denable_hotwording=0 \
+	-Dbuildtype=Official \
 	\
 %if 0%{?shared}
 	-Dcomponent=shared_library \

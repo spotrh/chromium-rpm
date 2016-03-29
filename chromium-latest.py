@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # Copyright 2010,2015 Tom Callaway <tcallawa@redhat.com>
-# Copyright 2013-2015 Tomas Popela <tpopela@redhat.com>
+# Copyright 2013-2016 Tomas Popela <tpopela@redhat.com>
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
 # "Software"), to deal in the Software without restriction, including
@@ -42,7 +42,7 @@ chromium_root_dir = "."
 version_string = "stable"
 
 name = 'Chromium Latest'
-script_version = 0.7
+script_version = 0.8
 my_description = '{0} {1}'.format(name, script_version)
 
 
@@ -232,6 +232,9 @@ if __name__ == '__main__':
   parser_add_argument(
       '--tests', action='store_true',
       help='Get the additional data for running tests')
+  parser_add_argument(
+      '--version',
+      help='Download a specific version of Chromium')
 
   # Parse the args
   if optparse:
@@ -246,21 +249,25 @@ if __name__ == '__main__':
   elif args.dev:
     version_string = "dev"
   elif (not (args.stable or args.beta or args.dev)):
-    print 'No version specified, downloading STABLE'
+    if (not args.version):
+      print 'No version specified, downloading STABLE'
     args.stable = True
 
-  chromium_version = check_omahaproxy(version_string)
+  chromium_version = args.version if args.version else check_omahaproxy(version_string)
 
   if args.dev:
     version_string = "unstable"
 
   if args.chrome:
+    if args.version:
+      print 'You cannot specify a Chrome RPM version!'
+      sys.exit(1)
     latest = 'google-chrome-%s_current_i386' % version_string
     download_chrome_latest_rpm("i386")
     latest = 'google-chrome-%s_current_x86_64' % version_string
     download_chrome_latest_rpm("x86_64")
     if (not (args.ffmpegclean or args.tests)):
-      sys.exit(1)
+      sys.exit(0)
 
   latest = 'chromium-%s.tar.xz' % chromium_version
 

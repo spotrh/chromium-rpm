@@ -13,6 +13,10 @@
 # We should not need to turn this on. The app in the webstore _should_ work.
 %global build_remoting_app 0
 
+# AddressSanitizer mode
+# https://www.chromium.org/developers/testing/addresssanitizer
+%global asan 0
+
 # TODO: Try arm (nacl disabled)
 %if 0%{?fedora}
  %ifarch i686
@@ -24,14 +28,16 @@
  %endif
 %endif
 
-%if 0%{?fedora} >= 22 && 0%{?fedora} < 24
-# Chromium needs icu 5.4 now, which isn't in older Fedora.
-# And F24+ is "too new". Sigh.
+%if 0
+# Chromium's fork of ICU is now something we can't unbundle.
+# This is left here to ease the change if that ever switches.
 BuildRequires:  libicu-devel >= 5.4
 %global bundleicu 0
 %else
 %global bundleicu 1
 %endif
+
+%global bundlere2 0
 
 ### Google API keys (see http://www.chromium.org/developers/how-tos/api-keys)
 ### Note: These are for Fedora use ONLY.
@@ -43,7 +49,7 @@ BuildRequires:  libicu-devel >= 5.4
 %global chromoting_client_id 449907151817-8vnlfih032ni8c4jjps9int9t86k546t.apps.googleusercontent.com 
 
 Name:		chromium%{chromium_channel}
-Version:	48.0.2564.116
+Version:	52.0.2723.2
 Release:	1%{?dist}
 Summary:	A WebKit (Blink) powered web browser
 Url:		http://www.chromium.org/Home
@@ -53,12 +59,11 @@ Group:		Applications/Internet
 ### Chromium Fedora Patches ###
 Patch0:		chromium-46.0.2490.71-gcc5.patch
 Patch1:		chromium-45.0.2454.101-linux-path-max.patch
-Patch2:		chromium-48.0.2564.103-addrfix.patch
+Patch2:		chromium-50.0.2661.86-addrfix.patch
 # Google patched their bundled copy of icu 54 to include API functionality that wasn't added until 55.
 # :P
-Patch3:		chromium-45.0.2454.101-system-icu-54-does-not-have-detectHostTimeZone.patch
+Patch3:		chromium-52.0.2723.2-system-icu-54-does-not-have-detectHostTimeZone.patch
 Patch4:		chromium-46.0.2490.71-notest.patch
-Patch5:		chromium-46.0.2490.80-cast_link_zlib.patch
 # In file included from ../linux/directory.c:21:
 # In file included from ../../../../native_client/src/nonsfi/linux/abi_conversion.h:20:
 # ../../../../native_client/src/nonsfi/linux/linux_syscall_structs.h:44:13: error: GNU-style inline assembly is disabled
@@ -72,12 +77,15 @@ Patch7:		chromium-47.0.2526.80-nacl-ignore-broken-fd-counter.patch
 Patch8:		chromium-48.0.2564.103-gcc6.patch
 # Use libusb_interrupt_event_handler from current libusbx (1.0.21-0.1.git448584a)
 Patch9:		chromium-48.0.2564.116-libusb_interrupt_event_handler.patch
-
+# Fix re2 unbundle gyp
+Patch10:	chromium-50.0.2661.94-unbundle-re2-fix.patch
+# Fix PNGImageDecoder code
+Patch11:	chromium-52.0.2723.2-PNGImageDecoder-fix-cast.patch
 
 ### Chromium Tests Patches ###
 Patch100:	chromium-46.0.2490.86-use_system_opus.patch
-Patch101:	chromium-46.0.2490.86-use_system_harfbuzz.patch
-Patch102:	chromium-46.0.2490.86-sync_link_zlib.patch
+Patch101:	chromium-52.0.2723.2-use_system_harfbuzz.patch
+Patch102:	chromium-52.0.2723.2-sync_link_zlib.patch
 
 # Use chromium-latest.py to generate clean tarball from released build tarballs, found here:
 # http://build.chromium.org/buildbot/official/
@@ -124,6 +132,7 @@ BuildRequires:	gnome-keyring-devel
 BuildRequires:	gtk2-devel
 BuildRequires:	glibc-devel
 BuildRequires:	gperf
+BuildRequires:	libatomic
 BuildRequires:	libcap-devel
 BuildRequires:	libdrm-devel
 BuildRequires:	libexif-devel
@@ -152,7 +161,7 @@ BuildRequires:	libstdc++-devel, openssl-devel
 BuildRequires:	nacl-gcc, nacl-binutils, nacl-newlib
 BuildRequires:	nacl-arm-gcc, nacl-arm-binutils, nacl-arm-newlib
 # pNaCl needs this monster
-BuildRequires:	native_client >= 47.0.2526.73
+BuildRequires:	native_client >= 50.0.2661.86
 %ifarch x86_64
 BuildRequires:  glibc-devel(x86-32) libgcc(x86-32)
 %endif
@@ -167,12 +176,13 @@ BuildRequires:	jsoncpp-devel
 BuildRequires:	kernel-headers
 BuildRequires:	libevent-devel
 BuildRequires:	libexif-devel
+BuildRequires:	libffi-devel
 %if 0%{?bundleicu}
 # If this is true, we're using the bundled icu.
 # We'd like to use the system icu every time, but we cannot always do that.
 %else
-# Not newer than 5.4 (at least not right now)
-BuildRequires:	libicu-devel = 5.4
+# Not newer than 54 (at least not right now)
+BuildRequires:	libicu-devel = 54.1
 %endif
 BuildRequires:	libjpeg-devel
 BuildRequires:	libpng-devel
@@ -202,8 +212,12 @@ BuildRequires:	python-jinja2
 BuildRequires:	python-markupsafe
 BuildRequires:	python-ply
 BuildRequires:	python-simplejson
-Requires:	re2 >= 20131024
-BuildRequires:	re2-devel >= 20131024
+%if 0%{?bundlere2}
+# Using bundled bits, do nothing.
+%else
+Requires:	re2 >= 20160401
+BuildRequires:	re2-devel >= 20160401
+%endif
 BuildRequires:	speech-dispatcher-devel
 BuildRequires:	speex-devel = 1.2
 BuildRequires:	yasm
@@ -211,6 +225,9 @@ BuildRequires:	pkgconfig(gnome-keyring-1)
 # remote desktop needs this
 BuildRequires:	pam-devel
 BuildRequires:	systemd
+%if 0%{?asan}
+BuildRequires:	clang, compiler-rt
+%endif
 
 # We pick up an automatic requires on the library, but we need the version check
 # because the nss shared library is unversioned.
@@ -220,6 +237,9 @@ Requires:	nss-mdns%{_isa}
 
 # GTK modules it expects to find for some reason.
 Requires:	libcanberra-gtk2%{_isa}
+
+# This enables support for u2f tokens
+Requires:	u2f-hidraw-policy
 
 # Once upon a time, we tried to split these out... but that's not worth the effort anymore.
 Provides:	chromium-ffmpegsumo = %{version}-%{release}
@@ -286,6 +306,9 @@ Provides: bundled(mt19937ar) = 2002.1.26
 Provides: bundled(ots) = 767d6040439e6ebcdb867271fcb686bd3f8ac739
 Provides: bundled(protobuf) = r476
 Provides: bundled(qcms) = 4
+%if 0%{?bundlere2}
+Provides: bundled(re2)
+%endif
 Provides: bundled(sfntly) = svn111
 Provides: bundled(skia)
 Provides: bundled(SMHasher) = 0
@@ -319,6 +342,7 @@ Requires(pre): shadow-utils
 Requires(post): systemd
 Requires(preun): systemd
 Requires(postun): systemd
+Requires: xorg-x11-server-Xvfb
 %if 0%{?shared}
 Requires: chromium-libs%{_isa} = %{version}-%{release}
 %endif
@@ -342,20 +366,25 @@ Remote desktop support for google-chrome & chromium.
 %patch2 -p1 -b .addrfix
 %patch3 -p1 -b .system-icu
 %patch4 -p1 -b .notest
-%patch5 -p1 -b .cast_link_zlib
 %patch6 -p1 -b .gnu-inline
 %patch7 -p1 -b .ignore-fd-count
-%patch8 -p1 -b .gcc6
+# %%patch8 -p1 -b .gcc6
 %patch9 -p1 -b .modern-libusbx
+%patch10 -p1 -b .unbundle-fix
+%patch11 -p1 -b .fixcast
 
 ### Chromium Tests Patches ###
 %patch100 -p1 -b .use_system_opus
 %patch101 -p1 -b .use_system_harfbuzz
 %patch102 -p1 -b .sync_link_zlib
 
-
+%if 0%{?asan}
+export CC="clang"
+export CXX="clang++"
+%else
 export CC="gcc"
 export CXX="g++"
+%endif
 export AR="ar"
 export RANLIB="ranlib"
 
@@ -453,7 +482,17 @@ export CHROMIUM_BROWSER_GYP_DEFINES="\
 	-Dgoogle_api_key="%{api_key}" \
 	-Dgoogle_default_client_id="%{default_client_id}" \
 	-Dgoogle_default_client_secret="%{default_client_secret}" \
-	\
+%if 0%{?asan}
+	-Dasan=1 \
+	-Dclang=1 \
+	-Dhost_clang=1 \
+	-Dclang_dynlib_flags="" \
+	-Dclang_plugin_args="" \
+	-Dclang_chrome_plugins_flags="" \
+%else
+	-Dclang=0 \
+        -Dhost_clang=0 \
+%endif
 	-Ddisable_glibc=1 \
 	-Ddisable_sse2=1 \
 %if 0%{?nonacl}
@@ -476,7 +515,7 @@ export CHROMIUM_BROWSER_GYP_DEFINES="\
 %else
 	-Duse_system_icu=1 \
 %endif
-	-Dicu_use_data_file_flag=0 \
+	-Dicu_use_data_file_flag=1 \
 	-Duse_system_jsoncpp=1 \
 	-Duse_system_libevent=1 \
 	-Duse_system_libexif=1 \
@@ -489,13 +528,15 @@ export CHROMIUM_BROWSER_GYP_DEFINES="\
 	-Duse_system_nspr=1 \
 	-Duse_system_opus=1 \
 	-Duse_system_protobuf=0 \
+%if 0%{?bundlere2}
+%else
 	-Duse_system_re2=1 \
+%endif
 	-Duse_system_speex=1 \
 	-Duse_system_libsrtp=0 \
 	-Duse_system_xdg_utils=1 \
 	-Duse_system_yasm=1 \
 	-Duse_system_zlib=0 \
-	-Duse_system_libevent=1 \
 	\
 	-Dlinux_link_libspeechd=1 \
 	-Dlinux_link_gnome_keyring=1 \
@@ -525,8 +566,6 @@ export CHROMIUM_BROWSER_GYP_DEFINES="\
 	\
 	-Dno_strict_aliasing=1 \
 	-Dv8_no_strict_aliasing=1 \
-	-Dclang=0 \
-	-Dhost_clang=0 \
 	\
 	-Dremove_webcore_debug_symbols=1 \
 	-Dlogging_like_official_build=1 \
@@ -535,27 +574,35 @@ export CHROMIUM_BROWSER_GYP_DEFINES="\
 %if 0%{?shared}
 	-Dcomponent=shared_library \
 %endif
-	-Dwerror="
+	-Duse_sysroot=0 \
+	-Dwerror= -Dsysroot="
 
 # Remove most of the bundled libraries. Libraries specified below (taken from
 # Gentoo's Chromium ebuild) are the libraries that needs to be preserved.
 build/linux/unbundle/remove_bundled_libraries.py \
+%if 0%{?asan}
+	'buildtools/third_party/libc++' \
+	'buildtools/third_party/libc++abi' \
+%endif
 	'third_party/ffmpeg' \
 	'third_party/adobe' \
 	'third_party/flac' \
 	'third_party/harfbuzz-ng' \
 	'third_party/icu' \
-	'third_party/libevent' \
+	'base/third_party/libevent' \
 	'third_party/libjpeg_turbo' \
 	'third_party/libpng' \
 	'third_party/libsrtp' \
 	'third_party/libwebp' \
 	'third_party/libxml' \
 	'third_party/libxslt' \
+%if 0%{?bundlere2}
 	'third_party/re2' \
+%endif
 	'third_party/snappy' \
 	'third_party/speech-dispatcher' \
 	'third_party/usb_ids' \
+	'third_party/woff2' \
 	'third_party/xdg-utils' \
 	'third_party/yasm' \
 	'third_party/zlib' \
@@ -571,7 +618,6 @@ build/linux/unbundle/remove_bundled_libraries.py \
 	'breakpad/src/third_party/curl' \
 	'chrome/third_party/mozilla_security_manager' \
 	'courgette/third_party' \
-	'crypto/third_party/nss' \
 	'native_client/src/third_party/dlmalloc' \
 	'net/third_party/mozilla_security_manager' \
 	'net/third_party/nss' \
@@ -579,6 +625,7 @@ build/linux/unbundle/remove_bundled_libraries.py \
 	'third_party/analytics' \
 	'third_party/angle' \
 	'third_party/angle/src/third_party/compiler' \
+	'third_party/angle/src/third_party/libXNVCtrl' \
 	'third_party/angle/src/third_party/murmurhash' \
 	'third_party/angle/src/third_party/trace_event' \
 	'third_party/boringssl' \
@@ -615,8 +662,8 @@ build/linux/unbundle/remove_bundled_libraries.py \
 	'third_party/libsecret' \
 	'third_party/libudev' \
 	'third_party/libusb' \
-	'third_party/libvpx_new' \
-	'third_party/libvpx_new/source/libvpx/third_party/x86inc' \
+	'third_party/libvpx' \
+	'third_party/libvpx/source/libvpx/third_party/x86inc' \
 	'third_party/libxml/chromium' \
 	'third_party/libwebm' \
 	'third_party/libyuv' \
@@ -624,9 +671,7 @@ build/linux/unbundle/remove_bundled_libraries.py \
 	'third_party/lzma_sdk' \
 	'third_party/mesa' \
 	'third_party/modp_b64' \
-	'third_party/mojo' \
 	'third_party/mt19937ar' \
-	'third_party/npapi' \
 	'third_party/openmax_dl' \
 	'third_party/opus' \
 	'third_party/ots' \
@@ -641,6 +686,7 @@ build/linux/unbundle/remove_bundled_libraries.py \
 	'third_party/pdfium/third_party/zlib_v128' \
 	'third_party/polymer' \
 	'third_party/protobuf' \
+	'third_party/protobuf/third_party/six' \
 	'third_party/ply' \
 	'third_party/qcms' \
 	'third_party/sfntly' \
@@ -677,6 +723,9 @@ build/linux/unbundle/replace_gyp_files.py $CHROMIUM_BROWSER_GYP_DEFINES
 
 build/gyp_chromium \
 	--depth . \
+%if 0%{?asan}
+	-Drelease_extra_cflags="-O1 -fno-inline-functions -fno-inline" \
+%endif
 	$CHROMIUM_BROWSER_GYP_DEFINES
 
 # hackity hack hack
@@ -792,7 +841,7 @@ ln -s %{chromium_path}/%{chromium_browser_channel}.sh %{buildroot}%{_bindir}/%{c
 mkdir -p %{buildroot}%{_mandir}/man1/
 
 pushd %{target}
-cp -a *.pak locales resources %{buildroot}%{chromium_path}
+cp -a *.pak locales resources icudtl.dat %{buildroot}%{chromium_path}
 %if 0%{?nacl}
 cp -a nacl_helper* *.nexe pnacl tls_edit %{buildroot}%{chromium_path}
 chmod -x %{buildroot}%{chromium_path}/nacl_helper_bootstrap* *.nexe
@@ -1222,6 +1271,7 @@ getent group chrome-remote-desktop >/dev/null || groupadd -r chrome-remote-deskt
 %dir %{chromium_path}
 %{chromium_path}/*.bin
 %{chromium_path}/*.pak
+%{chromium_path}/icudtl.dat
 %{chromium_path}/%{chromium_browser_channel}
 %{chromium_path}/%{chromium_browser_channel}.sh
 %if 0%{?nacl}
@@ -1275,6 +1325,51 @@ getent group chrome-remote-desktop >/dev/null || groupadd -r chrome-remote-deskt
 %endif
 
 %changelog
+* Mon May 9 2016 Tom Callaway <spot@fedoraproject.org> 52.0.2723.2-1
+- force to dev to see if it works better on F24+
+
+* Wed May 4 2016 Tom Callaway <spot@fedoraproject.org> 50.0.2661.94-6
+- apply upstream fix for https://bugs.chromium.org/p/chromium/issues/detail?id=604534
+
+* Tue May 3 2016 Tom Callaway <spot@fedoraproject.org> 50.0.2661.94-5
+- use bundled re2 (conditionalize it)
+
+* Tue May 3 2016 Tom Callaway <spot@fedoraproject.org> 50.0.2661.94-4
+- disable asan (it never quite built)
+- do not preserve re2 bundled tree, causes header/library mismatch
+
+* Mon May 2 2016 Tom Callaway <spot@fedoraproject.org> 50.0.2661.94-3
+- enable AddressSanize (ASan) for debugging
+
+* Sat Apr 30 2016 Tom Callaway <spot@fedoraproject.org> 50.0.2661.94-2
+- use bundled icu always. *sigh*
+
+* Fri Apr 29 2016 Tom Callaway <spot@fedoraproject.org> 50.0.2661.94-1
+- update to 50.0.2661.94
+
+* Wed Apr 27 2016 Tom Callaway <spot@fedoraproject.org> 50.0.2661.86-1
+- update to 50.0.2661.86
+
+* Thu Mar 17 2016 Tom Callaway <spot@fedoraproject.org> 49.0.2623.87-4
+- protect third_party/woff2
+
+* Thu Mar 17 2016 Tom Callaway <spot@fedoraproject.org> 49.0.2623.87-3
+- add BuildRequires: libffi-devel
+
+* Thu Mar 17 2016 Tom Callaway <spot@fedoraproject.org> 49.0.2623.87-2
+- explicitly disable sysroot
+
+* Thu Mar 17 2016 Tom Callaway <spot@fedoraproject.org> 49.0.2623.87-1
+- update to 49.0.2623.87
+
+* Mon Feb 29 2016 Tom Callaway <spot@fedoraproject.org> 48.0.2564.116-3
+- Happy Leap Day!
+- add Requires: u2f-hidraw-policy for u2f token support
+- add Requires: xorg-x11-server-Xvfb for chrome-remote-desktop
+
+* Fri Feb 26 2016 Tom Callaway <spot@fedoraproject.org> 48.0.2564.116-2
+- fix icu BR
+
 * Wed Feb 24 2016 Tom Callaway <spot@fedoraproject.org> 48.0.2564.116-1
 - Update to 48.0.2564.116
 - conditionalize icu properly

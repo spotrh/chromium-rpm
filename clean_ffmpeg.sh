@@ -147,13 +147,22 @@ header_files="	libavcodec/x86/inline_asm.h \
 
 manual_files="	libavcodec/x86/hpeldsp_rnd_template.c \
 		libavcodec/x86/rnd_template.c \
+		libavcodec/x86/videodsp_init.c \
+		libavcodec/x86/vorbisdsp_init.c \
 		libavcodec/bit_depth_template.c \
 		libavcodec/fft_template.c \
 		libavcodec/h264pred_template.c \
 		libavcodec/hpel_template.c \
 		libavcodec/mdct_template.c \
 		libavcodec/pel_template.c \
+		libavcodec/utils.c \
 		libavcodec/videodsp_template.c \
+		libavformat/options.c \
+		libavformat/pcm.c \
+		libavformat/utils.c \
+		libavutil/cpu.c \
+		libavutil/x86/cpu.c \
+		libavutil/x86/float_dsp_init.c \
 		libavutil/x86/x86inc.asm \
 		libavutil/x86/x86util.asm "
 
